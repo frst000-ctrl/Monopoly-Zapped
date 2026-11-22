@@ -27,7 +27,7 @@ Une fois installée, l’application fonctionne **hors connexion**.
 
 ## Publication sur GitHub Pages
 
-Adresse publique : **https://frst000-ctrl.github.io/monopoly-zapped/**
+Adresse publique : **https://frst000-ctrl.github.io/Monopoly-Zapped/**
 
 Le workflow `.github/workflows/deploy.yml` lance les tests, construit l’application avec le bon chemin (`BASE_PATH=/<nom du dépôt>/`) et la publie à chaque push sur `main`.
 
@@ -43,7 +43,7 @@ git push
 
 ### Sauvegardes et changement d’adresse
 
-Les parties sont enregistrées dans le stockage du navigateur, **par adresse** : une partie jouée sur `http://localhost:5173` n’apparaît pas sur `https://frst000-ctrl.github.io/monopoly-zapped/`, et inversement. Pour transférer une partie : Réglages → **Exporter la sauvegarde**, puis sur l’autre adresse ou l’autre appareil : Accueil → **Importer**. Les mises à jour de l’application ne touchent pas aux sauvegardes. Supprimer les données du site dans le navigateur les efface : exportez avant.
+Les parties sont enregistrées dans le stockage du navigateur, **par adresse** : une partie jouée sur `http://localhost:5173` n’apparaît pas sur `https://frst000-ctrl.github.io/Monopoly-Zapped/`, et inversement. Pour transférer une partie : Réglages → **Exporter la sauvegarde**, puis sur l’autre adresse ou l’autre appareil : Accueil → **Importer**. Les mises à jour de l’application ne touchent pas aux sauvegardes. Supprimer les données du site dans le navigateur les efface : exportez avant.
 
 ## Utilisation
 
