@@ -28,11 +28,12 @@ export const PLAYER_COLORS = ['#e0262f', '#1f6feb', '#1f9d55', '#f5b014', '#9b51
 export const DEFAULT_SETTINGS: GameSettings = {
   startingCash: 1500,
   goSalary: 200,
-  currency: 'M',
+  currency: 'KM',
   freeParkingJackpot: false,
   confirmThreshold: 500,
   quickAmounts: [100, 200, 500],
   jailFine: 50,
+  trackPositions: true,
 };
 
 export interface SetupPlayer {
@@ -129,7 +130,7 @@ export type GameAction = { id: string } & (
   | { type: 'collectFreeParking'; playerId: PlayerId }
   | { type: 'declareBankruptcy'; playerId: PlayerId; creditorId: PlayerId | null }
   | { type: 'updateCard'; cardId: string; effect: CardEffect }
-  | { type: 'updateSettings'; patch: Partial<Pick<GameSettings, 'goSalary' | 'confirmThreshold' | 'quickAmounts' | 'freeParkingJackpot' | 'jailFine' | 'currency'>> }
+  | { type: 'updateSettings'; patch: Partial<Pick<GameSettings, 'goSalary' | 'confirmThreshold' | 'quickAmounts' | 'freeParkingJackpot' | 'jailFine' | 'currency' | 'trackPositions'>> }
   | { type: 'setCardSignature'; playerId: PlayerId; signature: number[] | null }
   | { type: 'setNfcLink'; serial: string; target: ZappedTarget | null }
   | { type: 'endGame' }
@@ -335,13 +336,13 @@ function reduce(s: GameState, a: GameAction, ctx: Ctx): Outcome {
     }
     case 'payJailFine': {
       const p = getActivePlayer(s, a.playerId);
-      if (!p.inJail) fail('INVALID_STATE', `${p.name} n’est pas en prison.`);
+      if (!p.inJail && s.settings.trackPositions) fail('INVALID_STATE', `${p.name} n’est pas en prison.`);
       playerPaysBank(s, ctx, p.id, s.settings.jailFine, 'jail', 'Amende de sortie de prison', true);
       return releaseFromJail(s, p.id, ctx);
     }
     case 'useJailCard': {
       const p = getActivePlayer(s, a.playerId);
-      if (!p.inJail) fail('INVALID_STATE', `${p.name} n’est pas en prison.`);
+      if (!p.inJail && s.settings.trackPositions) fail('INVALID_STATE', `${p.name} n’est pas en prison.`);
       const cardId = p.jailCards.shift();
       if (!cardId) fail('INVALID_STATE', `${p.name} n’a pas de carte « Sortie de prison ».`);
       logEvent(s, ctx, `${p.name} utilise une carte « Sortie de prison »`);
@@ -643,6 +644,16 @@ function applyCard(s: GameState, card: CardDef, playerId: PlayerId, ctx: Ctx): O
       if (e.amount > 0) bankPays(s, ctx, p.id, e.amount, 'card', label);
       else if (e.amount < 0) playerPaysBank(s, ctx, p.id, -e.amount, 'card', label, true);
       return undefined;
+    case 'moveTo':
+    case 'moveBy':
+    case 'nearest':
+      // Plateau physique : la carte est une consigne, le joueur déplace son pion lui-même.
+      if (!s.settings.trackPositions) return undefined;
+      break;
+    default:
+      break;
+  }
+  switch (e.type) {
     case 'moveTo':
       return moveTo(s, p.id, e.square, e.collectGo, ctx, false);
     case 'moveBy': {

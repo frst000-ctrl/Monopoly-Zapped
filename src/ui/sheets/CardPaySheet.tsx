@@ -183,7 +183,7 @@ function DueButton({ icon: Icon, children, onClick, disabled, tone = 'primary' }
       disabled={disabled}
       className={cx(
         'w-full min-h-16 rounded-3xl px-5 py-3 flex items-center gap-3 text-left font-bold text-[17px] transition active:scale-[0.98] disabled:opacity-40',
-        tone === 'success' ? 'bg-gain text-[#04210f]' : 'bg-accent text-white shadow-lg shadow-accent/25',
+        tone === 'success' ? 'bg-gain text-white' : 'bg-accent text-white shadow-lg shadow-accent/25',
       )}
     >
       <Icon size={24} className="shrink-0" />
@@ -196,7 +196,7 @@ function DueButton({ icon: Icon, children, onClick, disabled, tone = 'primary' }
 export function UnknownCardSheet({ signature, onClose }: { signature: number[] | null; onClose: () => void }) {
   const game = useGame();
   const run = useAction();
-  const { open } = useGameUi();
+  const { open, close, tab, select } = useGameUi();
   const alive = game.players.filter((p) => !p.bankrupt);
   return (
     <Sheet title="Carte non reconnue" onClose={onClose}>
@@ -212,7 +212,10 @@ export function UnknownCardSheet({ signature, onClose }: { signature: number[] |
                 type="button"
                 onClick={async () => {
                   const r = await run({ type: 'setCardSignature', playerId: p.id, signature }, `Carte associée à ${p.name}`);
-                  if (r?.ok) open({ type: 'cardPay', playerId: p.id });
+                  if (!r?.ok) return;
+                  // Écran principal : la carte sélectionne le joueur ; ailleurs : paiement direct.
+                  if (tab === 'home') { select(p.id); close(); }
+                  else open({ type: 'cardPay', playerId: p.id });
                 }}
                 className="h-14 rounded-2xl bg-surface-2 border border-line px-3 flex items-center gap-2 font-semibold"
               >

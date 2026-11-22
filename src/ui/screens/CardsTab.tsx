@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { DECK_LABELS, describeEffect } from '../../domain/cards';
 import type { CardDef, CardEffect, DeckKind } from '../../domain/types';
 import { useGame } from '../../store/gameStore';
-import { Button, Card, cx, Field, inputClass, PlayerPicker, SectionTitle, Sheet } from '../components/ui';
+import { AmountInput, Button, Card, cx, Field, inputClass, parseAmount, PlayerPicker, SectionTitle, Sheet } from '../components/ui';
+import { amountToInput } from '../../domain/money';
 import { useGameUi } from '../gameUi';
 import { useAction } from '../useAction';
 import { OutcomePanel } from './TurnTab';
@@ -107,18 +108,18 @@ function CardEditor({ card, onClose }: { card: CardDef; onClose: () => void }) {
   const e = card.effect;
   const [a, setA] = useState(() => {
     switch (e.type) {
-      case 'money': return String(Math.abs(e.amount));
+      case 'money': return amountToInput(Math.abs(e.amount), game.settings.currency);
       case 'payEach':
-      case 'collectEach': return String(e.amount);
-      case 'repairs': return String(e.perHouse);
+      case 'collectEach': return amountToInput(e.amount, game.settings.currency);
+      case 'repairs': return amountToInput(e.perHouse, game.settings.currency);
       case 'moveBy': return String(Math.abs(e.steps));
       default: return '';
     }
   });
-  const [b, setB] = useState(e.type === 'repairs' ? String(e.perHotel) : '');
+  const [b, setB] = useState(e.type === 'repairs' ? amountToInput(e.perHotel, game.settings.currency) : '');
   const [sign, setSign] = useState(e.type === 'money' ? Math.sign(e.amount) : e.type === 'moveBy' ? Math.sign(e.steps) : 1);
-  const na = Number(a);
-  const nb = Number(b);
+  const na = e.type === 'moveBy' ? (/^\d+$/.test(a) ? Number(a) : Number.NaN) : (parseAmount(a) ?? Number.NaN);
+  const nb = parseAmount(b) ?? Number.NaN;
 
   const build = (): CardEffect | null => {
     if (a === '' || !Number.isInteger(na) || na < 0) return null;
@@ -162,8 +163,18 @@ function CardEditor({ card, onClose }: { card: CardDef; onClose: () => void }) {
           ))}
         </div>
       )}
-      {numeric(a, setA, e.type === 'repairs' ? `Par maison (${game.settings.currency})` : e.type === 'moveBy' ? 'Nombre de cases' : `Montant (${game.settings.currency})`)}
-      {e.type === 'repairs' && numeric(b, setB, `Par hôtel (${game.settings.currency})`)}
+      {e.type === 'moveBy' ? (
+        numeric(a, setA, 'Nombre de cases')
+      ) : (
+        <Field label={e.type === 'repairs' ? 'Par maison' : 'Montant'}>
+          <AmountInput value={a} onChange={setA} currency={game.settings.currency} />
+        </Field>
+      )}
+      {e.type === 'repairs' && (
+        <Field label="Par hôtel">
+          <AmountInput value={b} onChange={setB} currency={game.settings.currency} />
+        </Field>
+      )}
       {next && <p className="text-sm text-muted">Nouvel effet : {describeEffect(next, game.settings.currency)}</p>}
     </Sheet>
   );

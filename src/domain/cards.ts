@@ -1,3 +1,5 @@
+import { getSquare } from './board';
+import { formatMoney } from './money';
 import type { CardDef, CardEffect, DeckKind } from './types';
 
 // Cartes aux formulations originales (aucun texte officiel reproduit).
@@ -50,12 +52,12 @@ export const DECK_LABELS: Record<DeckKind, string> = {
 
 /** Texte lisible de l'effet, pour l'affichage. */
 export function describeEffect(effect: CardEffect, currency: string): string {
-  const m = (n: number) => `${Math.abs(n).toLocaleString('fr-FR')} ${currency}`;
+  const m = (n: number) => formatMoney(Math.abs(n), currency);
   switch (effect.type) {
     case 'money':
       return effect.amount >= 0 ? `Recevez ${m(effect.amount)}` : `Payez ${m(effect.amount)}`;
     case 'moveTo':
-      return `Déplacement vers la case ${effect.square}${effect.collectGo ? ' (salaire si passage par Départ)' : ''}`;
+      return `Rendez-vous : ${getSquare(effect.square).name}${effect.collectGo ? ' (salaire si vous passez par le Départ)' : ''}`;
     case 'moveBy':
       return effect.steps >= 0 ? `Avancez de ${effect.steps} cases` : `Reculez de ${-effect.steps} cases`;
     case 'goToJail':

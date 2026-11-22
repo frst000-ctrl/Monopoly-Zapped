@@ -1,4 +1,4 @@
-import { Banknote, Building2, Gamepad2, History, Layers, Menu, Nfc, Settings2, Undo2 } from 'lucide-react';
+import { Banknote, Building2, Gamepad2, History, LayoutGrid, Layers, Menu, Nfc, Settings2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Outcome, SetupPlayer } from '../../domain/game';
 import { store, useGame, useStore } from '../../store/gameStore';
@@ -18,10 +18,12 @@ import { PropertiesTab } from './PropertiesTab';
 import { SettingsTab } from './SettingsTab';
 import { TurnTab } from './TurnTab';
 import { ZappedTab } from './ZappedTab';
+import { ZappedHome } from './ZappedHome';
 
 const TABS: { id: TabId; label: string; icon: typeof Banknote; mobile: boolean }[] = [
-  { id: 'turn', label: 'Partie', icon: Gamepad2, mobile: true },
+  { id: 'home', label: 'Accueil', icon: LayoutGrid, mobile: true },
   { id: 'bank', label: 'Banque', icon: Banknote, mobile: true },
+  { id: 'turn', label: 'Partie', icon: Gamepad2, mobile: false },
   { id: 'props', label: 'Titres', icon: Building2, mobile: true },
   { id: 'cards', label: 'Cartes', icon: Layers, mobile: false },
   { id: 'zapped', label: 'Zapped', icon: Nfc, mobile: false },
@@ -37,13 +39,14 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
   const { confirm, toast } = useFeedback();
   const [tab, setTabState] = useState<TabId>(() => {
     try {
-      return (sessionStorage.getItem(TAB_KEY) as TabId) || 'turn';
+      return (sessionStorage.getItem(TAB_KEY) as TabId) || 'home';
     } catch {
-      return 'turn';
+      return 'home';
     }
   });
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [selectedId, select] = useState<string | null>(null);
 
   const setTab = useCallback((t: TabId) => {
     setTabState(t);
@@ -55,7 +58,10 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
     window.scrollTo({ top: 0 });
   }, []);
 
-  const ui: GameUi = useMemo(() => ({ open: setSheet, close: () => setSheet(null), setTab, outcome, setOutcome }), [setTab, outcome]);
+  const ui: GameUi = useMemo(
+    () => ({ open: setSheet, close: () => setSheet(null), setTab, tab, selectedId, select, outcome, setOutcome }),
+    [setTab, tab, selectedId, outcome],
+  );
 
   // Le résultat affiché concerne le joueur actif : on l'efface quand le tour change.
   useEffect(() => setOutcome(null), [game.turn.turnNumber]);
@@ -75,9 +81,10 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
   const restart = () => onRestart(game.players.map((p) => ({ name: p.name, color: p.color })), game.settings.startingCash);
 
   let content;
-  if (game.status === 'ended' && (tab === 'turn' || tab === 'bank')) content = <GameOver onRestart={restart} />;
+  if (game.status === 'ended' && (tab === 'turn' || tab === 'bank' || tab === 'home')) content = <GameOver onRestart={restart} />;
   else
     switch (tab) {
+      case 'home': content = null; break;
       case 'turn': content = <TurnTab />; break;
       case 'bank': content = <BankTab />; break;
       case 'props': content = <PropertiesTab />; break;
@@ -93,12 +100,21 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
     const g = store.getSnapshot().game;
     if (!g || g.status !== 'playing') return;
     const id = signature ? matchSignature(signature, cardCandidates(g)) : null;
+    if (id && tab === 'home') {
+      // Écran principal : comme dans le lecteur d'origine, la carte « s'insère ».
+      select(id);
+      setSheet(null);
+      return;
+    }
     setSheet(id ? { type: 'cardPay', playerId: id } : { type: 'unknownCard', signature });
   };
 
   return (
     <GameUiContext.Provider value={ui}>
       <CardReaderProvider onCard={onCard}>
+      {tab === 'home' && game.status === 'playing' ? (
+        <ZappedHome />
+      ) : (
       <div className="min-h-full md:flex">
         {/* Barre latérale (tablette paysage / ordinateur) */}
         <aside className="hidden md:flex md:flex-col w-60 lg:w-64 shrink-0 border-r border-line/60 bg-surface/50 h-dvh sticky top-0 p-4 safe-top">
@@ -160,11 +176,12 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
               {TABS.filter((t) => t.mobile).map((t) => (
                 <NavButton key={t.id} active={tab === t.id} onClick={() => setTab(t.id)} icon={t.icon} label={t.label} />
               ))}
-              <NavButton active={['cards', 'zapped', 'settings', 'more'].includes(tab)} onClick={() => setTab('more')} icon={Menu} label="Plus" />
+              <NavButton active={['cards', 'zapped', 'settings', 'turn', 'more'].includes(tab)} onClick={() => setTab('more')} icon={Menu} label="Plus" />
             </div>
           </nav>
         </div>
       </div>
+      )}
       <SheetHost sheet={sheet} />
       </CardReaderProvider>
     </GameUiContext.Provider>

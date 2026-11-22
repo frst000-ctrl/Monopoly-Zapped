@@ -1,7 +1,7 @@
 import { Gavel, Hammer, Landmark, Repeat, ShoppingCart, Undo, UserCog } from 'lucide-react';
 import { useState } from 'react';
 import { getProperty, GROUP_LABELS, RAILROAD_RENTS } from '../../domain/board';
-import { formatMoney, mortgageInterest, unmortgageCost } from '../../domain/money';
+import { amountToInput, formatMoney, mortgageInterest, unmortgageCost } from '../../domain/money';
 import { canBuildHouse, canMortgage, canSellHouse, canTransfer, canUnmortgage, computeRent, type Check } from '../../domain/rules';
 import { useGame } from '../../store/gameStore';
 import { Buildings, propertyColor } from '../components/PropertyRow';
@@ -21,7 +21,7 @@ export function PropertySheet({ square, onClose }: { square: number; onClose: ()
   const m = (n: number) => formatMoney(n, cur);
   const current = game.players[game.turn.currentIndex];
   const [buyer, setBuyer] = useState<string | null>(current && !current.bankrupt ? current.id : null);
-  const [price, setPrice] = useState(String(def.price));
+  const [price, setPrice] = useState(amountToInput(def.price, game.settings.currency));
   const [assigning, setAssigning] = useState(false);
   const [assignTo, setAssignTo] = useState<string | null>(null);
   const playing = game.status === 'playing';

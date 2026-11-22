@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BOARD, getProperty } from '../../domain/board';
-import { formatMoney } from '../../domain/money';
+import { amountToInput, formatMoney } from '../../domain/money';
 import { computeRent } from '../../domain/rules';
 import { rollDie, useGame } from '../../store/gameStore';
 import { AmountInput, Button, cx, Field, inputClass, Notice, parseAmount, PlayerPicker, Select, Sheet } from '../components/ui';
@@ -92,7 +92,7 @@ export function TransferSheet({ init, onClose }: { init: Init<'transfer'>; onClo
   const alive = game.players.filter((p) => !p.bankrupt);
   const [from, setFrom] = useState<string | null>(init.from ?? alive[0]?.id ?? null);
   const [to, setTo] = useState<string | null>(init.to ?? alive.find((p) => p.id !== (init.from ?? alive[0]?.id))?.id ?? null);
-  const [amount, setAmount] = useState(init.amount ? String(init.amount) : '');
+  const [amount, setAmount] = useState(init.amount ? amountToInput(init.amount, game.settings.currency) : '');
   const [label, setLabel] = useState('');
   const value = parseAmount(amount);
   const pf = game.players.find((p) => p.id === from);
@@ -136,7 +136,8 @@ export function RentSheet({ init, onClose }: { init: Init<'rent'>; onClose: () =
   );
   const [square, setSquare] = useState<number | null>(init.square ?? null);
   const [dice, setDice] = useState('');
-  const [double, setDouble] = useState(false);
+  const [double, setDouble] = useState(!!init.railroadDouble);
+  const utilityTen = !!init.utilityTen;
   const cur = game.settings.currency;
   const def = square !== null ? getProperty(square) : null;
   const ps = square !== null ? game.properties[square] : undefined;
@@ -144,13 +145,13 @@ export function RentSheet({ init, onClose }: { init: Init<'rent'>; onClose: () =
   const payer = game.players.find((p) => p.id === payerId);
   const diceTotal = Number(dice);
   const diceOk = def?.kind !== 'utility' || (Number.isInteger(diceTotal) && diceTotal >= 2 && diceTotal <= 12);
-  const rent = def && diceOk ? computeRent(game, def.index, { diceTotal: def.kind === 'utility' ? diceTotal : undefined, railroadDouble: def.kind === 'railroad' && double }) : 0;
+  const rent = def && diceOk ? computeRent(game, def.index, { diceTotal: def.kind === 'utility' ? diceTotal : undefined, railroadDouble: def.kind === 'railroad' && double, utilityTen: def.kind === 'utility' && utilityTen }) : 0;
   const invalid = !payer || !def || !owner || owner.id === payer.id || ps?.mortgaged || !diceOk || rent <= 0 || payer.balance < rent;
 
   const submit = async () => {
     if (invalid || !def || !payer || !owner) return;
     const r = await run(
-      { type: 'payRent', payerId: payer.id, square: def.index, diceTotal: def.kind === 'utility' ? diceTotal : undefined, railroadDouble: def.kind === 'railroad' && double },
+      { type: 'payRent', payerId: payer.id, square: def.index, diceTotal: def.kind === 'utility' ? diceTotal : undefined, railroadDouble: def.kind === 'railroad' && double, utilityTen: def.kind === 'utility' && utilityTen },
       `Loyer ${def.name} : ${payer.name} → ${owner.name}`,
       { amount: rent, actionId: formId },
     );
@@ -175,7 +176,7 @@ export function RentSheet({ init, onClose }: { init: Init<'rent'>; onClose: () =
         )}
       </Field>
       {def?.kind === 'utility' && (
-        <Field label="Total des dés" hint={game.properties[def.index] && 'Loyer = 4 × dés (une compagnie) ou 10 × dés (les deux).'}>
+        <Field label="Total des dés" hint={utilityTen ? 'Carte « compagnie la plus proche » : loyer = 10 × dés.' : 'Loyer = 4 × dés (une compagnie) ou 10 × dés (les deux).'}>
           <div className="flex gap-2">
             <input className={inputClass} inputMode="numeric" value={dice} onChange={(e) => setDice(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="2 à 12" />
             <Button onClick={() => setDice(String(rollDie() + rollDie()))}>Lancer</Button>

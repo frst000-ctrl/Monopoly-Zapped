@@ -58,7 +58,7 @@ export function ZappedTab() {
     <div className="max-w-3xl mx-auto space-y-6">
       <Card className="p-5">
         <div className="flex items-start gap-3">
-          <Info className="text-[#7fb2ff] shrink-0 mt-0.5" />
+          <Info className="text-[#1f6feb] shrink-0 mt-0.5" />
           <div className="text-sm leading-relaxed space-y-2 text-fg/85">
             <p className="font-semibold text-fg">Ce que l’on sait des cartes Zapped d’origine</p>
             <p>

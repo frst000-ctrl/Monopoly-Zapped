@@ -4,7 +4,7 @@ import { formatMoney, mortgageInterest } from '../../domain/money';
 import { canTransfer, ownedBy } from '../../domain/rules';
 import { useGame } from '../../store/gameStore';
 import { propertyColor } from '../components/PropertyRow';
-import { AmountInput, Button, cx, Field, Notice, PlayerPicker, SectionTitle, Sheet } from '../components/ui';
+import { AmountInput, Button, cx, Field, Notice, parseAmount, PlayerPicker, SectionTitle, Sheet } from '../components/ui';
 import type { SheetRequest } from '../gameUi';
 import { useAction, useFormId } from '../useAction';
 
@@ -22,13 +22,13 @@ export function TradeSheet({ init, onClose }: { init: Extract<SheetRequest, { ty
   const cur = game.settings.currency;
   const pa = game.players.find((p) => p.id === a);
   const pb = game.players.find((p) => p.id === b);
-  const ac = aCash === '' ? 0 : Number(aCash);
-  const bc = bCash === '' ? 0 : Number(bCash);
+  const ac = aCash === '' ? 0 : (parseAmount(aCash) ?? Number.NaN);
+  const bc = bCash === '' ? 0 : (parseAmount(bCash) ?? Number.NaN);
   const interest = (list: number[]) => list.filter((i) => game.properties[i]?.mortgaged).reduce((s, i) => s + mortgageInterest(getProperty(i).mortgage), 0);
   const empty = aGives.length + bGives.length === 0 && ac + bc === 0;
   const aShort = pa ? pa.balance < ac || pa.balance - ac + bc - interest(bGives) < 0 : true;
   const bShort = pb ? pb.balance < bc || pb.balance - bc + ac - interest(aGives) < 0 : true;
-  const invalid = !pa || !pb || pa.id === pb.id || empty || aShort || bShort;
+  const invalid = !pa || !pb || pa.id === pb.id || empty || aShort || bShort || Number.isNaN(ac) || Number.isNaN(bc);
 
   const toggle = (list: number[], set: (l: number[]) => void, sq: number) => set(list.includes(sq) ? list.filter((x) => x !== sq) : [...list, sq]);
 

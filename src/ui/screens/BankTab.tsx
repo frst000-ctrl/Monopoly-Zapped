@@ -51,12 +51,12 @@ export function BankTab() {
       <div className="grid grid-cols-3 gap-3 mb-3">
         {amounts.map((a) => (
           <QuickButton key={`+${a}`} tone="gain" onClick={() => quick(a, 1)}>
-            +{a}
+            +{formatMoney(a, cur)}
           </QuickButton>
         ))}
         {amounts.map((a) => (
           <QuickButton key={`-${a}`} tone="loss" onClick={() => quick(a, -1)} disabled={player.balance < a}>
-            −{a}
+            −{formatMoney(a, cur)}
           </QuickButton>
         ))}
       </div>
@@ -72,7 +72,7 @@ export function BankTab() {
         <BigAction icon={Receipt} label="Payer une taxe" onClick={() => open({ type: 'tax', playerId: player.id })} />
         <BigAction
           icon={Landmark}
-          label={`Salaire Départ +${game.settings.goSalary}`}
+          label={`Salaire Départ +${formatMoney(game.settings.goSalary, cur)}`}
           disabled={game.settings.goSalary <= 0}
           onClick={() => run({ type: 'collectGo', playerId: player.id }, `${player.name} touche le salaire du Départ`, { amount: game.settings.goSalary })}
         />

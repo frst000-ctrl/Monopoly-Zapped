@@ -141,6 +141,12 @@ export interface GameSettings {
   confirmThreshold: number;
   quickAmounts: number[];
   jailFine: number;
+  /**
+   * Suivi de la position des pions par l'application. Désactivé quand la partie
+   * se joue sur le plateau physique : les cartes de déplacement deviennent de
+   * simples consignes, sans calcul de passage par le Départ.
+   */
+  trackPositions: boolean;
 }
 
 export interface TurnState {

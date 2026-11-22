@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { formatMoney } from '../../domain/money';
+import { amountToInput, formatMoney, parseAmountInput, ZAPPED_CURRENCY } from '../../domain/money';
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ');
@@ -9,10 +9,10 @@ export function cx(...c: (string | false | null | undefined)[]) {
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-accent text-white hover:bg-accent-strong active:bg-accent shadow-lg shadow-accent/20',
-  secondary: 'bg-surface-3 text-fg hover:bg-[#2f3648] border border-line',
+  secondary: 'bg-surface text-fg hover:bg-surface-2 border border-line shadow-sm',
   ghost: 'bg-transparent text-fg hover:bg-surface-2',
   danger: 'bg-loss/15 text-loss border border-loss/40 hover:bg-loss/25',
-  success: 'bg-gain text-[#04210f] hover:brightness-110 shadow-lg shadow-gain/20',
+  success: 'bg-gain text-white hover:brightness-110 shadow-lg shadow-gain/20',
 };
 
 export function Button({
@@ -85,7 +85,7 @@ export function Sheet({ title, onClose, children, footer, wide }: { title: strin
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center fade-in" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Fermer" className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <button type="button" aria-label="Fermer" className="absolute inset-0 bg-[#0b1a24]/45 backdrop-blur-sm" onClick={onClose} />
       <div
         ref={ref}
         tabIndex={-1}
@@ -120,28 +120,56 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 export const inputClass =
   'w-full h-12 rounded-2xl bg-surface-2 border border-line px-4 text-base text-fg placeholder:text-muted/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30';
 
-/** Saisie d'un montant entier positif. Renvoie null tant que la saisie est invalide. */
+/**
+ * Saisie d'un montant. En monnaie Zapped (« KM »), on tape un nombre et on choisit
+ * l'unité M (millions) ou K (milliers) : la valeur transmise est du type « 1,5M ».
+ */
 export function AmountInput({ value, onChange, currency, autoFocus, presets }: { value: string; onChange: (v: string) => void; currency: string; autoFocus?: boolean; presets?: number[] }) {
+  const zapped = currency === ZAPPED_CURRENCY;
+  const unit = /K$/i.test(value) ? 'K' : 'M';
+  const num = zapped ? value.replace(/[MK]$/i, '') : value;
+  const setNum = (raw: string) => {
+    if (!zapped) return onChange(raw.replace(/[^0-9]/g, '').slice(0, 8));
+    const cleaned = raw.replace('.', ',').replace(/[^0-9,]/g, '').replace(/,(?=.*,)/g, '').slice(0, 7);
+    onChange(cleaned ? cleaned + unit : '');
+  };
   return (
     <div>
-      <div className="relative">
-        <input
-          className={cx(inputClass, 'text-2xl font-bold tabular h-14 pr-14')}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoFocus={autoFocus}
-          placeholder="0"
-          value={value}
-          onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
-          aria-label="Montant"
-        />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold">{currency}</span>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            className={cx(inputClass, 'text-2xl font-bold tabular h-14', !zapped && 'pr-14')}
+            inputMode={zapped ? 'decimal' : 'numeric'}
+            autoFocus={autoFocus}
+            placeholder="0"
+            value={num}
+            onChange={(e) => setNum(e.target.value)}
+            aria-label="Montant"
+          />
+          {!zapped && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold">{currency}</span>}
+        </div>
+        {zapped && (
+          <div className="flex rounded-2xl border border-line overflow-hidden shrink-0" role="radiogroup" aria-label="Unité">
+            {(['M', 'K'] as const).map((u) => (
+              <button
+                key={u}
+                type="button"
+                role="radio"
+                aria-checked={unit === u}
+                onClick={() => num && onChange(num + u)}
+                className={cx('w-14 h-14 text-xl font-black', unit === u ? 'bg-accent text-white' : 'bg-surface-2 text-muted')}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {presets && (
         <div className="flex flex-wrap gap-2 mt-2">
           {presets.map((p) => (
-            <button key={p} type="button" onClick={() => onChange(String(p))} className="h-8 px-3 rounded-full bg-surface-3 text-sm font-semibold tabular hover:bg-line">
-              {p}
+            <button key={p} type="button" onClick={() => onChange(amountToInput(p, currency))} className="h-8 px-3 rounded-full bg-surface-3 text-sm font-semibold tabular hover:bg-line">
+              {zapped ? formatMoney(p, currency) : p}
             </button>
           ))}
         </div>
@@ -151,9 +179,7 @@ export function AmountInput({ value, onChange, currency, autoFocus, presets }: {
 }
 
 export function parseAmount(v: string): number | null {
-  if (!/^\d+$/.test(v)) return null;
-  const n = Number(v);
-  return n > 0 && Number.isSafeInteger(n) ? n : null;
+  return parseAmountInput(v);
 }
 
 export function Select<T extends string | number>({ value, onChange, options, ariaLabel }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; ariaLabel: string }) {
@@ -189,10 +215,10 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 
 export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'error' | 'success'; children: ReactNode }) {
   const tones = {
-    info: 'bg-[#1f6feb]/10 border-[#1f6feb]/30 text-[#b9d3ff]',
-    warn: 'bg-gold/10 border-gold/30 text-[#ffe7a3]',
-    error: 'bg-loss/10 border-loss/40 text-[#ffc1c1]',
-    success: 'bg-gain/10 border-gain/30 text-[#b6f2cb]',
+    info: 'bg-[#1f6feb]/10 border-[#1f6feb]/30 text-[#163e7a]',
+    warn: 'bg-gold/10 border-gold/40 text-[#6b4a00]',
+    error: 'bg-loss/10 border-loss/40 text-[#8a1717]',
+    success: 'bg-gain/10 border-gain/40 text-[#0d5a2a]',
   };
   return <div className={cx('rounded-2xl border px-4 py-3 text-sm leading-relaxed', tones[tone])}>{children}</div>;
 }

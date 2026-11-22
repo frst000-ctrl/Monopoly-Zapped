@@ -1,6 +1,7 @@
 import { ArrowLeft, Minus, Play, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { DEFAULT_SETTINGS, PLAYER_COLORS, type SetupPlayer } from '../../domain/game';
+import { amountToInput } from '../../domain/money';
 import { store } from '../../store/gameStore';
 import { AmountInput, Button, Card, cx, Field, inputClass, parseAmount, SectionTitle, Toggle } from '../components/ui';
 import { useFeedback } from '../feedback';
@@ -15,8 +16,9 @@ export function SetupScreen({ initial, onCancel, onStarted }: { initial: { playe
       { name: '', color: PLAYER_COLORS[1] },
     ],
   );
-  const [cash, setCash] = useState(String(initial.startingCash ?? DEFAULT_SETTINGS.startingCash));
-  const [salary, setSalary] = useState(String(DEFAULT_SETTINGS.goSalary));
+  const cur = DEFAULT_SETTINGS.currency;
+  const [cash, setCash] = useState(amountToInput(initial.startingCash ?? DEFAULT_SETTINGS.startingCash, cur));
+  const [salary, setSalary] = useState(amountToInput(DEFAULT_SETTINGS.goSalary, cur));
   const [jackpot, setJackpot] = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -40,13 +42,13 @@ export function SetupScreen({ initial, onCancel, onStarted }: { initial: { playe
   const start = () => {
     if (starting) return;
     const startingCash = parseAmount(cash);
-    const goSalary = salary === '' ? 0 : Number(salary);
+    const goSalary = salary === '' ? 0 : (parseAmount(salary) ?? Number.NaN);
     if (!startingCash) return toast('Indiquez un capital de départ valide.', 'error');
     if (!Number.isInteger(goSalary) || goSalary < 0) return toast('Salaire du Départ invalide.', 'error');
     setStarting(true);
     const r = store.start({
       players: players.map((p, i) => ({ name: p.name.trim() || (DEFAULT_NAMES[i] as string), color: p.color })),
-      settings: { startingCash, goSalary, freeParkingJackpot: jackpot },
+      settings: { startingCash, goSalary, freeParkingJackpot: jackpot, trackPositions: false },
     });
     setStarting(false);
     if (!r.ok) return toast(r.error, 'error');
@@ -101,7 +103,7 @@ export function SetupScreen({ initial, onCancel, onStarted }: { initial: { playe
                       aria-label={`Couleur ${c}`}
                       disabled={takenBy >= 0}
                       onClick={() => update(i, { color: c })}
-                      className={cx('h-9 w-9 rounded-full transition disabled:opacity-20', p.color === c ? 'ring-2 ring-offset-2 ring-offset-surface ring-white scale-110' : '')}
+                      className={cx('h-9 w-9 rounded-full transition disabled:opacity-20', p.color === c ? 'ring-2 ring-offset-2 ring-offset-surface ring-fg scale-110' : '')}
                       style={{ background: c }}
                     />
                   );
@@ -114,10 +116,10 @@ export function SetupScreen({ initial, onCancel, onStarted }: { initial: { playe
         <SectionTitle>Règles</SectionTitle>
         <Card className="p-4 mb-8">
           <Field label="Capital de départ">
-            <AmountInput value={cash} onChange={setCash} currency={DEFAULT_SETTINGS.currency} presets={[1500, 2000, 2500]} />
+            <AmountInput value={cash} onChange={setCash} currency={cur} presets={[1500, 2000, 2500]} />
           </Field>
           <Field label="Salaire au passage du Départ">
-            <AmountInput value={salary} onChange={setSalary} currency={DEFAULT_SETTINGS.currency} />
+            <AmountInput value={salary} onChange={setSalary} currency={cur} />
           </Field>
           <Toggle checked={jackpot} onChange={setJackpot} label="Règle maison : taxes et amendes vont au Parc gratuit" />
         </Card>

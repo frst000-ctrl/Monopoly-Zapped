@@ -55,6 +55,7 @@ export function validateGame(raw: unknown): GameState | null {
   if (!Array.isArray(g.transactions) || !Array.isArray(g.events)) return null;
   if (!Array.isArray(g.processedActionIds)) g.processedActionIds = [];
   if (!g.zapped) g.zapped = { nfcLinks: {} };
+  if (typeof g.settings.trackPositions !== 'boolean') g.settings.trackPositions = true;
   return g as GameState;
 }
 

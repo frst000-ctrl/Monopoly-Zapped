@@ -5,6 +5,8 @@ import { PlayerSheet } from './PlayerSheet';
 import { PropertySheet } from './PropertySheet';
 import { TradeSheet } from './TradeSheet';
 import { CardPaySheet, UnknownCardSheet } from './CardPaySheet';
+import { AuctionSheet, BuildSheet, BuySheet, DrawSheet, JailSheet, PayPlayerSheet } from './TileSheets';
+import { MenuSheet } from '../screens/ZappedHome';
 import { CustomSheet, RentSheet, TaxSheet, TransferSheet } from './MoneySheets';
 
 export function SheetHost({ sheet }: { sheet: SheetRequest | null }) {
@@ -33,5 +35,19 @@ export function SheetHost({ sheet }: { sheet: SheetRequest | null }) {
       return <UnknownCardSheet key={key} signature={sheet.signature} onClose={close} />;
     case 'bankruptcy':
       return <BankruptcySheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'buy':
+      return <BuySheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'build':
+      return <BuildSheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'payPlayer':
+      return <PayPlayerSheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'auction':
+      return <AuctionSheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'draw':
+      return <DrawSheet key={key} playerId={sheet.playerId} deck={sheet.deck} onClose={close} />;
+    case 'jail':
+      return <JailSheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'menu':
+      return <MenuSheet key={key} onClose={close} />;
   }
 }

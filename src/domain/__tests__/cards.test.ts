@@ -116,3 +116,45 @@ describe('cartes', () => {
     expect(() => act(s, ctx, { type: 'updateCard', cardId: 'cc-bank-error', effect: { type: 'goToJail' } })).toThrow(/type/);
   });
 });
+
+describe('plateau physique (positions non suivies)', () => {
+  const physical = () => {
+    const g = newGame(2);
+    g.state.settings.trackPositions = false;
+    return g;
+  };
+  it('les cartes de déplacement sont de simples consignes', () => {
+    const { state, ctx, ids } = physical();
+    state.players[0]!.position = 7;
+    for (const id of ['ch-go', 'ch-back3', 'ch-rail']) {
+      const r = act(state, ctx, { type: 'drawCard', deck: stack(state, id), playerId: ids[0]! });
+      expect(r.state.players[0]!.position).toBe(7);
+      expect(bal(r.state, ids[0]!)).toBe(1500);
+      expect(r.outcome).toMatchObject({ kind: 'card', pending: false, then: undefined });
+    }
+  });
+  it('les cartes d’argent et de prison s’appliquent', () => {
+    const { state, ctx, ids } = physical();
+    let s = act(state, ctx, { type: 'drawCard', deck: stack(state, 'cc-bank-error'), playerId: ids[0]! }).state;
+    expect(bal(s, ids[0]!)).toBe(1700);
+    s = act(s, ctx, { type: 'drawCard', deck: stack(s, 'cc-jail'), playerId: ids[0]! }).state;
+    expect(s.players[0]!.inJail).toBe(true);
+  });
+  it('amende et carte de sortie de prison utilisables à tout moment', () => {
+    const { state, ctx, ids } = physical();
+    let s = act(state, ctx, { type: 'payJailFine', playerId: ids[0]! }).state;
+    expect(bal(s, ids[0]!)).toBe(1450);
+    s = act(s, ctx, { type: 'drawCard', deck: stack(s, 'ch-jail-free'), playerId: ids[0]! }).state;
+    s = act(s, ctx, { type: 'useJailCard', playerId: ids[0]! }).state;
+    expect(s.players[0]!.jailCards).toEqual([]);
+  });
+});
+
+describe('describeEffect (montants Zapped)', () => {
+  it('affiche les montants en millions et les cases par leur nom', async () => {
+    const { describeEffect } = await import('../cards');
+    expect(describeEffect({ type: 'money', amount: 150 }, 'KM')).toBe('Recevez 1,5M');
+    expect(describeEffect({ type: 'payEach', amount: 50 }, 'KM')).toBe('Payez 500K à chaque joueur');
+    expect(describeEffect({ type: 'moveTo', square: 39, collectGo: true }, 'KM')).toContain('Rue de la Paix');
+  });
+});

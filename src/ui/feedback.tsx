@@ -72,10 +72,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
               key={t.id}
               className={cx(
                 'pop-in pointer-events-auto max-w-md w-full flex items-start gap-3 rounded-2xl px-4 py-3 shadow-2xl border text-sm font-medium backdrop-blur',
-                t.tone === 'success' && 'bg-[#0f2a1a]/95 border-gain/40',
-                t.tone === 'error' && 'bg-[#2c1012]/95 border-loss/50',
-                t.tone === 'info' && 'bg-surface-2/95 border-line',
-                t.tone === 'warn' && 'bg-[#2b230c]/95 border-gold/40',
+                t.tone === 'success' && 'bg-[#eafaf0]/95 border-gain/50 text-[#0d5a2a]',
+                t.tone === 'error' && 'bg-[#fdecec]/95 border-loss/50 text-[#8a1717]',
+                t.tone === 'info' && 'bg-surface/95 border-line',
+                t.tone === 'warn' && 'bg-[#fff6dd]/95 border-gold/50 text-[#6b4a00]',
               )}
               role={t.tone === 'error' ? 'alert' : 'status'}
             >

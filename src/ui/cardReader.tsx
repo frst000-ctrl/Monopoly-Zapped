@@ -55,7 +55,7 @@ export function CardReaderProvider({ onCard, children }: { onCard: Handler; chil
       {children}
       {count >= MIN_POINTS && (
         <div className="fixed inset-x-0 top-0 z-[70] flex justify-center pointer-events-none safe-top" aria-live="polite">
-          <div className="mt-3 rounded-full bg-gain text-[#04210f] font-bold text-sm px-4 py-2 flex items-center gap-2 shadow-2xl pop-in">
+          <div className="mt-3 rounded-full bg-gain text-white font-bold text-sm px-4 py-2 flex items-center gap-2 shadow-2xl pop-in">
             <ScanLine size={16} /> Lecture de la carte…
           </div>
         </div>

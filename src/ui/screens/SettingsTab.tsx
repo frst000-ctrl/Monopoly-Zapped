@@ -2,7 +2,8 @@ import { CheckCircle2, Download, Flag, Home, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { checkConsistency } from '../../domain/bank';
 import { store, useGame } from '../../store/gameStore';
-import { Button, Card, Field, inputClass, SectionTitle, Toggle } from '../components/ui';
+import { AmountInput, Button, Card, Field, parseAmount, SectionTitle, Toggle } from '../components/ui';
+import { amountToInput, ZAPPED_CURRENCY } from '../../domain/money';
 import { useFeedback } from '../feedback';
 import { useAction } from '../useAction';
 
@@ -26,50 +27,63 @@ export function SettingsTab({ onRestart }: { onRestart: () => void }) {
   const run = useAction();
   const { confirm, toast } = useFeedback();
   const s = game.settings;
-  const [salary, setSalary] = useState(String(s.goSalary));
-  const [threshold, setThreshold] = useState(String(s.confirmThreshold));
-  const [fine, setFine] = useState(String(s.jailFine));
-  const [currency, setCurrency] = useState(s.currency);
-  const [quick, setQuick] = useState(s.quickAmounts.map(String));
+  const [zapped, setZapped] = useState(s.currency === ZAPPED_CURRENCY);
+  const cur = zapped ? ZAPPED_CURRENCY : s.currency === ZAPPED_CURRENCY ? 'M' : s.currency;
+  const [salary, setSalary] = useState(amountToInput(s.goSalary, s.currency));
+  const [threshold, setThreshold] = useState(amountToInput(s.confirmThreshold, s.currency));
+  const [fine, setFine] = useState(amountToInput(s.jailFine, s.currency));
+  const [quick, setQuick] = useState(s.quickAmounts.map((q) => amountToInput(q, s.currency)));
   const [jackpot, setJackpot] = useState(s.freeParkingJackpot);
+  const [track, setTrack] = useState(s.trackPositions);
   const playing = game.status === 'playing';
 
-  const num = (v: string) => (/^\d+$/.test(v) ? Number(v) : NaN);
+  // Change d'unité d'affichage : on convertit les saisies en cours.
+  const switchUnit = (z: boolean) => {
+    const to = z ? ZAPPED_CURRENCY : s.currency === ZAPPED_CURRENCY ? 'M' : s.currency;
+    const conv = (v: string) => {
+      const n = parseAmount(v);
+      return n === null ? v : amountToInput(n, to);
+    };
+    setSalary(conv(salary));
+    setThreshold(conv(threshold));
+    setFine(conv(fine));
+    setQuick(quick.map(conv));
+    setZapped(z);
+  };
+
+  const val = (v: string) => (v.trim() === '' || /^0+[MK]?$/i.test(v.trim()) ? 0 : (parseAmount(v) ?? Number.NaN));
   const save = async () => {
-    const quickAmounts = quick.map(num);
-    if ([num(salary), num(threshold), num(fine), ...quickAmounts].some((n) => Number.isNaN(n))) return toast('Valeurs invalides : nombres entiers uniquement.', 'error');
+    const quickAmounts = quick.map(val);
+    const values = [val(salary), val(threshold), val(fine), ...quickAmounts];
+    if (values.some((n) => Number.isNaN(n)) || val(fine) <= 0 || quickAmounts.some((q) => q <= 0)) return toast('Valeurs invalides : vérifiez les montants.', 'error');
     await run(
-      { type: 'updateSettings', patch: { goSalary: num(salary), confirmThreshold: num(threshold), jailFine: num(fine), currency: currency.trim(), quickAmounts, freeParkingJackpot: jackpot } },
+      { type: 'updateSettings', patch: { goSalary: val(salary), confirmThreshold: val(threshold), jailFine: val(fine), currency: cur, quickAmounts, freeParkingJackpot: jackpot, trackPositions: track } },
       'Réglages enregistrés',
     );
   };
-  const n = (v: string, set: (s: string) => void, label: string, hint?: string) => (
-    <Field label={label} hint={hint}>
-      <input className={inputClass} inputMode="numeric" value={v} onChange={(e) => set(e.target.value.replace(/\D/g, '').slice(0, 7))} />
-    </Field>
-  );
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <SectionTitle>Règles et banque</SectionTitle>
         <Card className="p-5">
+          <Toggle checked={zapped} onChange={switchUnit} label="Montants façon Zapped (15M, 600K)" />
+          <div className="h-3" />
           <div className="grid sm:grid-cols-2 gap-x-4">
-            {n(salary, setSalary, 'Salaire du Départ')}
-            {n(fine, setFine, 'Amende de prison')}
-            {n(threshold, setThreshold, 'Confirmation à partir de', '0 = jamais (les achats et faillites restent confirmés)')}
-            <Field label="Symbole monétaire">
-              <input className={inputClass} value={currency} maxLength={4} onChange={(e) => setCurrency(e.target.value)} />
-            </Field>
+            <Field label="Salaire du Départ"><AmountInput value={salary} onChange={setSalary} currency={cur} /></Field>
+            <Field label="Amende de prison"><AmountInput value={fine} onChange={setFine} currency={cur} /></Field>
+            <Field label="Confirmation à partir de" hint="Vide = jamais (achats et faillites restent confirmés)"><AmountInput value={threshold} onChange={setThreshold} currency={cur} /></Field>
           </div>
-          <Field label="Montants de la banque rapide">
-            <div className="grid grid-cols-3 gap-2">
+          <Field label="Montants rapides">
+            <div className="space-y-2">
               {quick.map((q, i) => (
-                <input key={i} aria-label={`Montant rapide ${i + 1}`} className={inputClass} inputMode="numeric" value={q} onChange={(e) => setQuick((arr) => arr.map((x, j) => (j === i ? e.target.value.replace(/\D/g, '').slice(0, 6) : x)))} />
+                <AmountInput key={i} value={q} onChange={(v) => setQuick((arr) => arr.map((x, j) => (j === i ? v : x)))} currency={cur} />
               ))}
             </div>
           </Field>
           <Toggle checked={jackpot} onChange={setJackpot} label="Taxes et amendes vont au Parc gratuit" />
+          <Toggle checked={track} onChange={setTrack} label="Suivre les pions dans l’application (dés virtuels)" />
+          <p className="text-xs text-muted mt-1">Désactivé : la partie se joue sur votre plateau, les cartes de déplacement sont de simples consignes.</p>
           <Button variant="primary" className="w-full mt-4" onClick={save} disabled={!playing}>
             Enregistrer les réglages
           </Button>
