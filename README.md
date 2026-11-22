@@ -27,7 +27,23 @@ Une fois installée, l’application fonctionne **hors connexion**.
 
 ## Publication sur GitHub Pages
 
-Le workflow `.github/workflows/deploy.yml` lance les tests, construit l’application et la publie à chaque push sur `main`. À activer une fois dans le dépôt : **Settings → Pages → Source : GitHub Actions**. L’application est alors disponible sur `https://<utilisateur>.github.io/<dépôt>/`.
+Adresse publique : **https://frst000-ctrl.github.io/monopoly-zapped/**
+
+Le workflow `.github/workflows/deploy.yml` lance les tests, construit l’application avec le bon chemin (`BASE_PATH=/<nom du dépôt>/`) et la publie à chaque push sur `main`.
+
+Activation (une seule fois) : dans le dépôt GitHub, **Settings → Pages → Build and deployment → Source : GitHub Actions**. Ensuite, onglet **Actions** → « Tests et déploiement GitHub Pages » → **Run workflow** (ou faites simplement un push).
+
+Mettre à jour l’application en ligne après une modification locale :
+
+```bash
+git add .
+git commit -m "Description de la modification"
+git push
+```
+
+### Sauvegardes et changement d’adresse
+
+Les parties sont enregistrées dans le stockage du navigateur, **par adresse** : une partie jouée sur `http://localhost:5173` n’apparaît pas sur `https://frst000-ctrl.github.io/monopoly-zapped/`, et inversement. Pour transférer une partie : Réglages → **Exporter la sauvegarde**, puis sur l’autre adresse ou l’autre appareil : Accueil → **Importer**. Les mises à jour de l’application ne touchent pas aux sauvegardes. Supprimer les données du site dans le navigateur les efface : exportez avant.
 
 ## Utilisation
 

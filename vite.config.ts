@@ -4,10 +4,13 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// base relative : l'application fonctionne aussi bien à la racine d'un domaine
-// que dans un sous-dossier (ex. GitHub Pages /monopoly-zapped-bank/).
+// Chemin de publication. Sur GitHub Pages, le workflow fournit BASE_PATH=/monopoly-zapped/
+// (https://frst000-ctrl.github.io/monopoly-zapped/). Sans variable, base relative :
+// l'application fonctionne à la racine d'un domaine comme dans un sous-dossier.
+const base = process.env.BASE_PATH || './';
+
 export default defineConfig({
-  base: './',
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -19,8 +22,9 @@ export default defineConfig({
         short_name: 'Zapped Bank',
         description: 'Banque électronique pour jouer au Monopoly Zapped sans l’application officielle.',
         lang: 'fr',
-        start_url: '.',
-        scope: '.',
+        id: base === './' ? '.' : base,
+        start_url: base === './' ? '.' : base,
+        scope: base === './' ? '.' : base,
         display: 'standalone',
         orientation: 'any',
         background_color: '#0b0d12',
