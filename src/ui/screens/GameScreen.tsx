@@ -7,6 +7,9 @@ import { Logo } from '../components/Logo';
 import { useFeedback } from '../feedback';
 import { GameUiContext, useGameUi as useGameUiSafe, type GameUi, type SheetRequest, type TabId } from '../gameUi';
 import { SheetHost } from '../sheets/SheetHost';
+import { CardReaderProvider } from '../cardReader';
+import { matchSignature } from '../../zapped/touchSignature';
+import { cardCandidates } from './ZappedTab';
 import { BankTab } from './BankTab';
 import { CardsTab } from './CardsTab';
 import { GameOver } from './GameOver';
@@ -85,8 +88,17 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
       case 'more': content = <MoreTab />; break;
     }
 
+  // Carte posée n'importe où : on ouvre le paiement du joueur reconnu.
+  const onCard = (signature: number[] | null) => {
+    const g = store.getSnapshot().game;
+    if (!g || g.status !== 'playing') return;
+    const id = signature ? matchSignature(signature, cardCandidates(g)) : null;
+    setSheet(id ? { type: 'cardPay', playerId: id } : { type: 'unknownCard', signature });
+  };
+
   return (
     <GameUiContext.Provider value={ui}>
+      <CardReaderProvider onCard={onCard}>
       <div className="min-h-full md:flex">
         {/* Barre latérale (tablette paysage / ordinateur) */}
         <aside className="hidden md:flex md:flex-col w-60 lg:w-64 shrink-0 border-r border-line/60 bg-surface/50 h-dvh sticky top-0 p-4 safe-top">
@@ -154,6 +166,7 @@ export function GameScreen({ onRestart }: { onRestart: (players: SetupPlayer[], 
         </div>
       </div>
       <SheetHost sheet={sheet} />
+      </CardReaderProvider>
     </GameUiContext.Provider>
   );
 }

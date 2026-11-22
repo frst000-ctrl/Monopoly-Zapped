@@ -4,6 +4,7 @@ import { BankruptcySheet } from './BankruptcySheet';
 import { PlayerSheet } from './PlayerSheet';
 import { PropertySheet } from './PropertySheet';
 import { TradeSheet } from './TradeSheet';
+import { CardPaySheet, UnknownCardSheet } from './CardPaySheet';
 import { CustomSheet, RentSheet, TaxSheet, TransferSheet } from './MoneySheets';
 
 export function SheetHost({ sheet }: { sheet: SheetRequest | null }) {
@@ -26,6 +27,10 @@ export function SheetHost({ sheet }: { sheet: SheetRequest | null }) {
       return <RentSheet key={key} init={sheet} onClose={close} />;
     case 'tax':
       return <TaxSheet key={key} init={sheet} onClose={close} />;
+    case 'cardPay':
+      return <CardPaySheet key={key} playerId={sheet.playerId} onClose={close} />;
+    case 'unknownCard':
+      return <UnknownCardSheet key={key} signature={sheet.signature} onClose={close} />;
     case 'bankruptcy':
       return <BankruptcySheet key={key} playerId={sheet.playerId} onClose={close} />;
   }

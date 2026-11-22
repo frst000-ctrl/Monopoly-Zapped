@@ -11,7 +11,9 @@ export type SheetRequest =
   | { type: 'transfer'; from?: string; to?: string; amount?: number }
   | { type: 'rent'; payerId?: string; square?: number }
   | { type: 'tax'; playerId?: string }
-  | { type: 'bankruptcy'; playerId: string };
+  | { type: 'bankruptcy'; playerId: string }
+  | { type: 'cardPay'; playerId: string }
+  | { type: 'unknownCard'; signature: number[] | null };
 
 export interface GameUi {
   open: (s: SheetRequest) => void;

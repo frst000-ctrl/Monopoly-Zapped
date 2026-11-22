@@ -5,7 +5,8 @@ import { formatMoney } from '../../domain/money';
 import type { GameState, Player } from '../../domain/types';
 import { useGame } from '../../store/gameStore';
 import { isWebNfcSupported, startNfcScan } from '../../zapped/nfc';
-import { averageSignatures, matchSignature, MIN_POINTS, signatureFromPoints } from '../../zapped/touchSignature';
+import { averageSignatures, matchSignature, MIN_POINTS } from '../../zapped/touchSignature';
+import { isTouchDevice, useCardCapture, useContactCount } from '../cardReader';
 import { AmountInput, Button, Card, cx, Field, Notice, parseAmount, PlayerDot, SectionTitle, Select, Sheet } from '../components/ui';
 import { useFeedback } from '../feedback';
 import { useGameUi } from '../gameUi';
@@ -16,54 +17,14 @@ import { useAction, useFormId } from '../useAction';
 // ---------------------------------------------------------------------------
 
 /**
- * Zone où l'on pose la carte. Dès que ≥ 3 contacts restent stables 400 ms,
- * on calcule l'empreinte. Une nouvelle lecture n'est possible qu'après avoir
- * retiré la carte (tous les contacts relâchés).
+ * Zone visuelle où poser la carte. La lecture elle-même est faite par le lecteur
+ * global ; tant que cette zone est affichée, elle reçoit les lectures en priorité.
  */
 function TouchReader({ onRead, label }: { onRead: (sig: number[] | null, points: number) => void; label: string }) {
-  const [count, setCount] = useState(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const done = useRef(false);
-  const ref = useRef<HTMLDivElement>(null);
-  // Référence stable : l'écouteur n'est pas réinstallé à chaque rendu (sinon le minuteur serait annulé).
-  const onReadRef = useRef(onRead);
-  onReadRef.current = onRead;
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const handle = (e: TouchEvent) => {
-      e.preventDefault();
-      const pts = Array.from(e.touches).map((t) => ({ x: t.clientX, y: t.clientY }));
-      setCount(pts.length);
-      if (timer.current) clearTimeout(timer.current);
-      if (pts.length === 0) {
-        done.current = false;
-        return;
-      }
-      if (done.current || pts.length < MIN_POINTS) return;
-      timer.current = setTimeout(() => {
-        done.current = true;
-        onReadRef.current(signatureFromPoints(pts), pts.length);
-      }, 400);
-    };
-    // Écouteurs non passifs : nécessaires pour empêcher le défilement / zoom.
-    el.addEventListener('touchstart', handle, { passive: false });
-    el.addEventListener('touchmove', handle, { passive: false });
-    el.addEventListener('touchend', handle, { passive: false });
-    el.addEventListener('touchcancel', handle, { passive: false });
-    return () => {
-      el.removeEventListener('touchstart', handle);
-      el.removeEventListener('touchmove', handle);
-      el.removeEventListener('touchend', handle);
-      el.removeEventListener('touchcancel', handle);
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
-
+  useCardCapture(onRead);
+  const count = useContactCount();
   return (
     <div
-      ref={ref}
       style={{ touchAction: 'none' }}
       className={cx('h-48 rounded-3xl border-2 border-dashed grid place-items-center text-center select-none transition', count >= MIN_POINTS ? 'border-gain bg-gain/10' : 'border-line bg-surface-2')}
     >
@@ -76,9 +37,9 @@ function TouchReader({ onRead, label }: { onRead: (sig: number[] | null, points:
   );
 }
 
-const touchCapable = () => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+const touchCapable = isTouchDevice;
 
-function cardCandidates(game: GameState) {
+export function cardCandidates(game: GameState) {
   return game.players.filter((p) => p.cardSignature && !p.bankrupt).map((p) => ({ id: p.id, signature: p.cardSignature as number[] }));
 }
 
@@ -104,7 +65,7 @@ export function ZappedTab() {
               Selon les tests publiés à la sortie du jeu (2012), les 4 cartes bancaires « Touch-Banking » ne contiennent <b>ni puce NFC ni code-barres</b>. Elles portent des plots conducteurs dont la disposition est propre à chaque carte. L’écran tactile les détecte comme plusieurs doigts posés en même temps, à condition que le joueur tienne la carte. Les cartes de propriétés n’ont aucune électronique.
             </p>
             <p>
-              Cette application propose donc un <b>lecteur tactile expérimental</b> : associez chaque carte à un joueur en la posant sur la zone, puis utilisez-la pour payer. Le résultat dépend de l’écran. Si la lecture échoue, le <b>mode manuel</b> (boutons joueurs) fonctionne toujours.
+              Cette application propose donc un <b>lecteur tactile expérimental</b>, actif sur <b>tous les écrans</b> : posez une carte n’importe où pendant la partie et la fenêtre de paiement du joueur s’ouvre (loyer, taxe ou achat dû proposés en un geste). Une carte inconnue peut être associée sur-le-champ, ou plus fiablement ci-dessous en 3 lectures. Le résultat dépend de l’écran. Si la lecture échoue, le <b>mode manuel</b> (boutons joueurs) fonctionne toujours.
             </p>
             <p className="text-muted">
               Lecture NFC : {nfc ? 'disponible sur cet appareil (Chrome Android), pour des tags NFC que vous ajoutez vous-même.' : 'indisponible sur cet appareil (Safari iPhone/iPad et Windows ne la proposent pas).'}

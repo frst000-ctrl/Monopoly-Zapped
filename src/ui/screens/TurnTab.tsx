@@ -334,6 +334,9 @@ export function OutcomePanel({ outcome, game }: { outcome: Outcome; game: GameSt
           <div className="mt-4">
             <SuggestionActions suggestion={outcome.suggestion} playerId={outcome.playerId} game={game} />
           </div>
+          {['rent', 'tax', 'buy'].includes(outcome.suggestion.type) && game.players.find((x) => x.id === outcome.playerId)?.cardSignature && (
+            <p className="text-xs text-muted mt-3 text-center">Ou posez la carte de {name(outcome.playerId)} sur l’écran.</p>
+          )}
         </Card>
       );
   }
